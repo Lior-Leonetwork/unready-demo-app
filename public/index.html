@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>quickcart — merch for people who ship</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+    background: #0f0a1e;
+    color: #f5f2ff;
+    min-height: 100vh;
+  }
+  header {
+    display: flex; align-items: center; gap: .75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .logo { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; }
+  .logo span { color: #a78bfa; }
+  .cart {
+    margin-left: auto;
+    background: rgba(167,139,250,.15);
+    border: 1px solid rgba(167,139,250,.4);
+    color: #d8ccff;
+    border-radius: 999px;
+    padding: .45rem 1rem;
+    font-weight: 700;
+  }
+  .hero {
+    text-align: center;
+    padding: 3.5rem 1.5rem 2.5rem;
+    background:
+      radial-gradient(600px 300px at 50% -50px, rgba(167,139,250,.35), transparent),
+      radial-gradient(400px 200px at 80% 0, rgba(56,189,248,.2), transparent);
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -.03em;
+    background: linear-gradient(90deg, #c4b5fd, #7dd3fc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p { color: #b7aed6; margin-top: .8rem; font-size: 1.05rem; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 1rem 1.5rem 4rem;
+  }
+  .card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 1.1rem;
+    padding: 1.2rem;
+    display: flex; flex-direction: column; gap: .35rem;
+    transition: transform .15s, border-color .15s;
+  }
+  .card:hover { transform: translateY(-3px); border-color: rgba(167,139,250,.5); }
+  .emoji { font-size: 2.6rem; }
+  .card h3 { font-size: 1.05rem; font-weight: 800; }
+  .card p { color: #a79fc4; font-size: .85rem; flex: 1; }
+  .row { display: flex; align-items: center; margin-top: .6rem; }
+  .price { font-weight: 800; font-size: 1.1rem; color: #7dd3fc; }
+  button {
+    margin-left: auto;
+    font: inherit; font-weight: 700;
+    background: #7c5cf0; color: white;
+    border: 0; border-radius: .7rem;
+    padding: .5rem .95rem;
+    cursor: pointer;
+  }
+  button:hover { background: #8f73f5; }
+  .checkout-bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; justify-content: center;
+    padding: 1rem;
+    background: linear-gradient(transparent, #0f0a1e 40%);
+    pointer-events: none;
+  }
+  .checkout-bar button {
+    pointer-events: auto;
+    font-size: 1rem;
+    padding: .8rem 1.6rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 30px rgba(124,92,240,.45);
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 5.5rem; transform: translateX(-50%);
+    background: #26203d; border: 1px solid rgba(167,139,250,.4);
+    color: #e6dfff;
+    border-radius: .8rem; padding: .7rem 1.1rem; font-size: .9rem;
+    opacity: 0; transition: opacity .25s;
+    max-width: 90vw; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+  footer { text-align: center; color: #6f678f; font-size: .8rem; padding: 0 1rem 5.5rem; }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo">quick<span>cart</span></div>
+    <div class="cart" id="cart">🛒 0</div>
+  </header>
+
+  <section class="hero">
+    <h1>Merch for people who ship</h1>
+    <p>Vibe-coded in a weekend. Deployed with Spaces.</p>
+  </section>
+
+  <main class="grid" id="grid"></main>
+
+  <div class="checkout-bar">
+    <button id="checkout">Checkout →</button>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <footer>quickcart is a demo shop — the Spaces readiness scanner's favorite test subject.</footer>
+
+  <script>
+    const cart = [];
+    const grid = document.getElementById("grid");
+    const cartEl = document.getElementById("cart");
+    const toastEl = document.getElementById("toast");
+    let toastTimer;
+
+    function toast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3200);
+    }
+
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then((products) => {
+        for (const p of products) {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML =
+            '<div class="emoji">' + p.emoji + "</div>" +
+            "<h3>" + p.name + "</h3>" +
+            "<p>" + p.tagline + "</p>" +
+            '<div class="row"><span class="price">$' + p.price + "</span>" +
+            "<button>Add</button></div>";
+          card.querySelector("button").addEventListener("click", () => {
+            cart.push(p);
+            cartEl.textContent = "🛒 " + cart.length;
+            toast(p.emoji + " " + p.name + " added to cart");
+          });
+          grid.appendChild(card);
+        }
+      });
+
+    document.getElementById("checkout").addEventListener("click", async () => {
+      if (!cart.length) return toast("Your cart is empty — add something first!");
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items: cart.map((p) => ({ id: p.id })) }),
+      });
+      const payload = await res.json();
+      if (payload.url) location.assign(payload.url);
+      else toast(payload.error || "Checkout is napping — try again later.");
+    });
+  </script>
+</body>
+</html>

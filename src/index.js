@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const multer = require("multer");
 const { Pool } = require("pg");
 const Stripe = require("stripe");
@@ -9,11 +10,29 @@ app.use(express.json());
 // TODO move this somewhere safer before launch
 const jwt_secret = "b2f8e1a94c6d03571e8f2a4b6c8d0e1f";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const API_URL = process.env.API_URL || "http://localhost:3000";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// the shop itself
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+const PRODUCTS = [
+  { id: "mug", emoji: "☕", name: "Founder Mug", tagline: "Holds coffee and dreams", price: 18 },
+  { id: "tee", emoji: "👕", name: "Vibe Coder Tee", tagline: "Shipped > perfect", price: 29 },
+  { id: "cap", emoji: "🧢", name: "Prod Cap", tagline: "Wear it like you deploy it", price: 24 },
+  { id: "sticker", emoji: "🚀", name: "Launch Sticker Pack", tagline: "12 stickers, zero bugs", price: 9 },
+  { id: "notebook", emoji: "📓", name: "Idea Notebook", tagline: "For the next big thing", price: 14 },
+  { id: "candle", emoji: "🕯️", name: "Server Room Candle", tagline: "Smells like warm GPUs", price: 22 },
+];
+
+app.get("/api/products", (req, res) => {
+  res.json(PRODUCTS);
+});
 
 // product images land on local disk, seems fine
 const upload = multer({ storage: multer.diskStorage({ destination: "./uploads" }) });
@@ -26,14 +45,23 @@ app.post("/api/upload", upload.single("image"), (req, res) => {
 app.post("/api/webhooks/stripe", async (req, res) => {
   const event = req.body;
   if (event.type === "checkout.session.completed") {
-    await db.query("UPDATE orders SET status = 'paid' WHERE id = $1", [
-      event.data.object.client_reference_id,
-    ]);
+    try {
+      await db.query("UPDATE orders SET status = 'paid' WHERE id = $1", [
+        event.data.object.client_reference_id,
+      ]);
+    } catch {
+      // no database yet, keep going
+    }
   }
   res.json({ received: true });
 });
 
 app.post("/api/checkout", async (req, res) => {
+  if (!stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments not configured — set STRIPE_SECRET_KEY." });
+  }
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: req.body.items,
@@ -44,8 +72,12 @@ app.post("/api/checkout", async (req, res) => {
 });
 
 app.get("/api/orders", async (req, res) => {
-  const { rows } = await db.query("SELECT * FROM orders ORDER BY created_at DESC");
-  res.json(rows);
+  try {
+    const { rows } = await db.query("SELECT * FROM orders ORDER BY created_at DESC");
+    res.json(rows);
+  } catch {
+    res.json([]);
+  }
 });
 
 app.listen(process.env.PORT || 3000, () => {
