@@ -1,0 +1,15 @@
+{
+  "name": "quickcart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A vibe-coded shop backend. Works on my machine.",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.0",
+    "stripe": "^14.0.0"
+  }
+}
