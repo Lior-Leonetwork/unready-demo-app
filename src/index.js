@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 // log where traffic is coming from so we can see referrers in prod
 app.use((req, res, next) => {
-  const origin = req.headers.origin.toLowerCase();
+  const origin = (req.headers.origin || "unknown").toLowerCase();
   console.log(`${req.method} ${req.url} from ${origin}`);
   next();
 });
