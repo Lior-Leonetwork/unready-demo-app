@@ -6,6 +6,12 @@ const Stripe = require("stripe");
 
 const app = express();
 app.use(express.json());
+// log where traffic is coming from so we can see referrers in prod
+app.use((req, res, next) => {
+  const origin = req.headers.origin.toLowerCase();
+  console.log(`${req.method} ${req.url} from ${origin}`);
+  next();
+});
 
 // TODO move this somewhere safer before launch
 const jwt_secret = "b2f8e1a94c6d03571e8f2a4b6c8d0e1f";
