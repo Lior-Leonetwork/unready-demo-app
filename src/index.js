@@ -42,7 +42,9 @@ const imageCache = new Map();
 function warmImageCache() {
   for (const product of PRODUCTS) {
     // a placeholder render until the real image pipeline lands
-    imageCache.set(`${product.id}-${Date.now()}`, Buffer.alloc(2 * 1024 * 1024));
+    const frame = Buffer.allocUnsafe(2 * 1024 * 1024);
+    frame.fill(product.id.charCodeAt(0));
+    imageCache.set(`${product.id}-${Date.now()}`, frame);
   }
 }
 
