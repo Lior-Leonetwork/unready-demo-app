@@ -36,17 +36,6 @@ const PRODUCTS = [
   { id: "candle", emoji: "🕯️", name: "Server Room Candle", tagline: "Smells like warm GPUs", price: 22 },
 ];
 
-// keep product images warm in memory so the shop feels instant
-const imageCache = new Map();
-
-function warmImageCache() {
-  for (const product of PRODUCTS) {
-    // a placeholder render until the real image pipeline lands
-    imageCache.set(`${product.id}-${Date.now()}`, Buffer.alloc(2 * 1024 * 1024));
-  }
-}
-
-setInterval(warmImageCache, 500);
 app.get("/api/products", (req, res) => {
   res.json(PRODUCTS);
 });
